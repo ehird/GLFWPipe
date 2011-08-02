@@ -4,7 +4,7 @@
 -- Copyright   :  Tobias Bexelius
 -- License     :  BSD3
 --
--- Maintainer  :  Tobias BexeliusBSD3
+-- Maintainer  :  Tobias Bexelius
 -- Stability   :  Experimental
 -- Portability :  Portable
 --
@@ -34,14 +34,13 @@ import OutputMerger
 import Foreign.Ptr
 import qualified Graphics.Rendering.OpenGL as GL
 import Graphics.Rendering.OpenGL (($=), get)
-import qualified Graphics.UI.GLUT as GLUT
 import System.IO.Unsafe (unsafePerformIO)
 import Formats
 import Control.Monad
 import Data.List
 
 
--- | A 3D texture. May only be created from main memory in GPipe.
+-- | A 3D texture. May only be created from main memory in GLFWPipe.
 -- 'Texture3D' @f@ has the following associated types in its 'Texture' instance:
 --
 -- [@TextureFormat (Texture3D f)@] @f@
@@ -151,7 +150,6 @@ instance ColorFormat f => Texture (Texture3D f) where
               i' <- evaluateDeep i
               x:.y:.z:.() <- evaluateDeep s
               ps' <- mapM evaluatePtr ps
-              GLUT.currentWindow $= Just (contextWindow cache)
               let size = GL.TextureSize3D (fromIntegral x) (fromIntegral y) (fromIntegral z)
               GL.textureBinding GL.Texture3D $= Just tex
               mapM_ (\(n, p) -> 
@@ -173,7 +171,6 @@ instance ColorFormat f => Texture (Texture2D f) where
               i' <- evaluateDeep i
               x:.y:.() <- evaluateDeep s
               ps' <- mapM evaluatePtr ps
-              GLUT.currentWindow $= Just (contextWindow cache)
               let size = GL.TextureSize2D (fromIntegral x) (fromIntegral y)
               GL.textureBinding GL.Texture2D $= Just tex
               mapM_ (\(n, p) -> 
@@ -195,7 +192,6 @@ instance ColorFormat f => Texture (Texture1D f) where
               i' <- evaluateDeep i
               x <- evaluateDeep s
               ps' <- mapM evaluatePtr ps
-              GLUT.currentWindow $= Just (contextWindow cache)
               let size = GL.TextureSize1D (fromIntegral x)
               GL.textureBinding GL.Texture1D $= Just tex
               mapM_ (\(n, p) -> 
@@ -217,7 +213,6 @@ instance ColorFormat f => Texture (TextureCube f) where
               i' <- evaluateDeep i
               x:.y:.() <- evaluateDeep s
               ps' <- mapM evaluatePtr ps
-              GLUT.currentWindow $= Just (contextWindow cache)
               let size = GL.TextureSize2D (fromIntegral x) (fromIntegral y)
               GL.textureBinding GL.TextureCubeMap $= Just tex
               mapM_

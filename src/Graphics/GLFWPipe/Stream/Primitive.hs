@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 --
--- Module      :  Graphics.GPipe.Stream.Primitive
+-- Module      :  Graphics.GLFWPipe.Stream.Primitive
 -- Copyright   :  Tobias Bexelius
 -- License     :  BSD3
 --
@@ -32,7 +32,7 @@
 -- from that package that is defined in terms of them) are highly encouraged.
 -----------------------------------------------------------------------------
 
-module Graphics.GPipe.Stream.Primitive (
+module Graphics.GLFWPipe.Stream.Primitive (
     -- * Data types
     PrimitiveStream(),
     Vertex(),

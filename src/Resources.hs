@@ -25,11 +25,10 @@ module Resources (
     UniformLocationSet,
     UniformSet,
     ContextCacheIO,
-    ContextCache(contextWindow,contextViewPort),
+    ContextCache(contextViewPort),
     newContextCache,
     setContextWindow,
     liftIO,
-    hiddenWindowContextCache,
     WinMappedTexture,
     newWinMappedTexture,
     bindWinMappedTexture,
@@ -41,7 +40,6 @@ module Resources (
     getContextCache,
     saveContextCache,
     changeContextSize,
-    getCurrentOrSetHiddenContext,
     ioEvaluate,
     evaluateDeep,
     evaluatePtr,
@@ -55,7 +53,6 @@ module Resources (
 
 import Graphics.Rendering.OpenGL hiding (Sampler3D, Sampler2D, Sampler1D, SamplerCube, Point, Linear, Clamp, Uniform)
 import qualified Data.HashTable as HT
-import qualified Graphics.UI.GLUT as GLUT
 import Data.Map (Map)
 import qualified Data.Map as Map
 import System.Mem.StableName
@@ -136,22 +133,19 @@ type IBCache = HT.HashTable (StableName [Int]) IndexBuffer
 data ContextCache = ContextCache {programCache :: ProgramCache,
                                   vbCache :: VBCache,
                                   ibCache :: IBCache,
-                                  contextWindow :: GLUT.Window,
                                   contextViewPort :: Size}
-newContextCache :: GLUT.Window -> IO ContextCache
-newContextCache w = do
+
+newContextCache :: IO ContextCache
+newContextCache = do
     pc <- newIORef TrieMap.empty
     vbc <- HT.new (==) (\(a,b) -> HT.hashString (map toEnum a) `xor` HT.hashInt (hashStableName b))
     ibc <- HT.new (==) (HT.hashInt . hashStableName)
-    let cache = ContextCache pc vbc ibc w (Size 0 0)
-    saveContextCache cache
+    let cache = ContextCache pc vbc ibc (Size 0 0)
     return cache
 
 setContextWindow :: ContextCacheIO ()
-setContextWindow = do w <- asks contextWindow
-                      s <- asks contextViewPort
-                      liftIO $ do GLUT.currentWindow $= Just w
-                                  viewport $= (Position 0 0, s)                     
+setContextWindow = do s <- asks contextViewPort
+                      liftIO $ viewport $= (Position 0 0, s)                     
 
 
 type ContextCacheIO = ReaderT ContextCache IO
@@ -209,7 +203,6 @@ createVertexBuffer xs i v = do vName <- liftIO $ makeStableName v
                                case test of
                                   Just b -> return b
                                   Nothing -> do
-                                     w <- asks contextWindow
                                      liftIO $ do [b] <- genObjectNames 1
                                                  -- putStrLn $ "Created vertex buffer " ++ show b
                                                  bindBuffer ArrayBuffer $= Just b
@@ -218,10 +211,7 @@ createVertexBuffer xs i v = do vName <- liftIO $ makeStableName v
                                                  let b' = VertexBuffer b $ length (head xs)
                                                  HT.insert cache k b'
                                                  addFinalizer v $ do HT.delete cache k
-                                                                     w' <- get GLUT.currentWindow
-                                                                     GLUT.currentWindow $= Just w
                                                                      deleteObjectNames [b]
-                                                                     GLUT.currentWindow $= w'
                                                                      -- putStrLn "Deleted vertex buffer"
                                                  return b'
 
@@ -232,7 +222,6 @@ createIndexBuffer xs vs = do cache <- asks ibCache
                              case test of
                                 Just i -> return i
                                 Nothing -> do
-                                   w <- asks contextWindow
                                    liftIO $ do [b] <- genObjectNames 1
                                                -- putStrLn $ "Created index buffer " ++ show b
                                                bindBuffer ElementArrayBuffer $= Just b
@@ -249,10 +238,7 @@ createIndexBuffer xs vs = do cache <- asks ibCache
                                                     return $ IndexBuffer b (length xs) UnsignedByte
                                                HT.insert cache iName i
                                                addFinalizer xs $ do HT.delete cache iName
-                                                                    w' <- get GLUT.currentWindow
-                                                                    GLUT.currentWindow $= Just w
                                                                     deleteObjectNames [b]
-                                                                    GLUT.currentWindow $= w'  
                                                                     -- putStrLn "Deleted index buffer"
                                                return i
 
@@ -261,22 +247,21 @@ useProgramResource p = liftIO $ currentProgram $= Just p
 
 useUniforms :: UniformLocationSet -> UniformSet -> ContextCacheIO ()
 useUniforms (fu,iu,bu,su) (f,i,b,s) = do
-            w <- asks contextWindow
             liftIO $ do
                 unless (null f) $ withArray (map (TexCoord1 . realToFrac) f :: [TexCoord1 GLfloat]) $ uniformv fu (fromIntegral $ length f)
                 unless (null i) $ withArray (map (TexCoord1 . fromIntegral) i :: [TexCoord1 GLint]) $ uniformv iu (fromIntegral $ length i)
                 unless (null b) $ withArray (map (TexCoord1 . fromBool) b :: [TexCoord1 GLint]) $ uniformv bu (fromIntegral $ length b)
-                mapM_ (useSampler w) $ Map.toList s
+                mapM_ useSampler $ Map.toList s
     where
-        useSampler w (t, xs) = do
+        useSampler (t, xs) = do
             let texs = nub xs
-            samplers <- mapM (createSampler w t) $ zip texs [0..]
+            samplers <- mapM (createSampler t) $ zip texs [0..]
             let texToSamp = zip texs samplers
                 ss = map (fromJust . flip lookup texToSamp) xs
             withArray ss $ uniformv (su Map.! t) (fromIntegral $ length ss)
-        createSampler w t ((Sampler f e,tex),i) = do
+        createSampler t ((Sampler f e,tex),i) = do
             activeTexture $= TextureUnit i
-            bindWinMappedTexture (target t) w tex t
+            bindWinMappedTexture (target t) tex t
             textureFilter (target t) $= toGLFilter f
             mapM_ (\c -> textureWrapMode (target t) c $= toGLWrap e) [S, T, R]
             return $ TexCoord1 (fromIntegral i::GLint)
@@ -308,38 +293,18 @@ drawVertexBuffer :: PrimitiveMode -> VertexBuffer -> Int -> IO ()
 drawVertexBuffer p vb s = do useVertexBuffer vb
                              drawArrays p 0 (fromIntegral s)
 
+{-# NOINLINE windowContextCache #-}
+windowContextCache :: IORef ContextCache
+windowContextCache = unsafePerformIO $ newIORef =<< newContextCache
 
-{-# NOINLINE hiddenWindowContextCache #-}
-hiddenWindowContextCache :: ContextCache
-hiddenWindowContextCache = unsafePerformIO $ do
-       GLUT.initialDisplayMode $= [ GLUT.SingleBuffered, GLUT.RGBMode, GLUT.WithAlphaComponent, GLUT.WithDepthBuffer, GLUT.WithStencilBuffer ]
-       w <- GLUT.createWindow "Hidden Window"
-       GLUT.windowStatus $= GLUT.Hidden
-       newContextCache w
-
-{-# NOINLINE windowContextCaches #-}
-windowContextCaches :: IORef (Map GLUT.Window ContextCache)
-windowContextCaches = unsafePerformIO $ newIORef $ Map.empty
-
-getContextCache :: GLUT.Window -> IO (Maybe ContextCache)
-getContextCache w = do m <- atomicModifyIORef windowContextCaches (\m -> (m,m))
-                       return $ Map.lookup w m
+getContextCache :: IO ContextCache
+getContextCache = readIORef windowContextCache
 
 saveContextCache :: ContextCache -> IO ()
-saveContextCache c = atomicModifyIORef windowContextCaches $ \ m -> (Map.insert (contextWindow c) c m, ())
+saveContextCache c = atomicModifyIORef windowContextCache $ \_ -> (c, ())
 
-changeContextSize :: GLUT.Window -> Size -> IO ()
-changeContextSize w s = atomicModifyIORef windowContextCaches $ \ m -> (Map.adjust (\c -> c {contextViewPort = s}) w m, ())
-
-getCurrentOrSetHiddenContext = do
-    mw <- get GLUT.currentWindow
-    case mw of Just w  -> do mc <- getContextCache w
-                             case mc of Just cache -> return cache
-                                        Nothing    -> setAndGetHiddenWindow
-               Nothing -> setAndGetHiddenWindow
-    where
-        setAndGetHiddenWindow = do GLUT.currentWindow $= Just (contextWindow hiddenWindowContextCache)
-                                   return hiddenWindowContextCache
+changeContextSize :: Size -> IO ()
+changeContextSize s = atomicModifyIORef windowContextCache $ \c -> (c {contextViewPort = s}, ())
 
 evaluateDeep a = do evaluate (a==a)
                     return a
@@ -355,11 +320,11 @@ evaluatePtr p = do a <- peek (castPtr p :: Ptr CUChar)
 -- Texture operations
 
 
-type WinMappedTexture = IORef (Map GLUT.Window TextureObject)
+type WinMappedTexture = IORef (Map () TextureObject)
 
 newWinMappedTexture :: (TextureObject -> ContextCache -> IO a) -> IO WinMappedTexture
 newWinMappedTexture ionew = do
-    cache <- getCurrentOrSetHiddenContext
+    cache <- getContextCache
     [tex] <- genObjectNames 1
     -- putStrLn $ "Created texture " ++ show tex
     swapBytes Unpack $= False
@@ -371,23 +336,19 @@ newWinMappedTexture ionew = do
     imageHeight Unpack $= 0
     skipImages Unpack $= 0
     ionew tex cache
-    ref <- newIORef $ Map.singleton (contextWindow cache) tex
+    ref <- newIORef $ Map.singleton () tex
     mkWeakIORef ref $ do m <- readIORef ref
-                         w <- get GLUT.currentWindow
                          mapM_ deleteTexture $ Map.toList m
-                         GLUT.currentWindow $= w
                          -- putStrLn "Deleted texture"
     return ref
     where
-        deleteTexture (w,t) = do GLUT.currentWindow $= Just w
-                                 deleteObjectNames [t]
+        deleteTexture (_,t) = deleteObjectNames [t]
                                    
-bindWinMappedTexture target w ref s  = do
+bindWinMappedTexture target ref s  = do
     mtex <- atomicModifyIORef ref (\a -> (a, takeOne a))
     case mtex of
         Right tex -> textureBinding target $= Just tex
-        Left (w',t) -> do GLUT.currentWindow $= Just w'
-                          textureBinding target $= Just t
+        Left (w',t) -> do textureBinding target $= Just t
                           ft <- get $ textureLevelRange target
                           f <- get $ textureInternalFormat (Left target) 0
                           swapBytes Unpack $= False
@@ -409,12 +370,11 @@ bindWinMappedTexture target w ref s  = do
                           tex <- transferTexture s ft f
                           textureLevelRange target $= ft
                           -- putStrLn $ "Transferred texture " ++ show tex
-                          atomicModifyIORef ref (flip (,) () . Map.insertWith (const id) w tex)
-    where takeOne a = case Map.lookup w a of
+                          atomicModifyIORef ref (flip (,) () . Map.insertWith (const id) () tex)
+    where takeOne a = case Map.lookup () a of
                         Nothing -> Left $ Map.elemAt 0 a
                         Just t -> Right t
-          createTexInWin = do GLUT.currentWindow $= Just w
-                              [tex] <- genObjectNames 1
+          createTexInWin = do [tex] <- genObjectNames 1
                               textureBinding target $= Just tex
                               return tex
           transferTexture Sampler3D (from,to) f = do

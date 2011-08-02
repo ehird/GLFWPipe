@@ -1,0 +1,64 @@
+name: GLFWPipe
+version: 0.5
+cabal-version: >= 1.2.3
+build-type: Simple
+license: BSD3
+copyright: Tobias Bexelius, Elliott Hird
+maintainer: Tobias Bexelius, Elliott Hird
+                 
+stability: Experimental
+homepage: http://github.com/ehird/GLFWPipe
+package-url: http://hackage.haskell.org/package/GLFWPipe
+bug-reports: mailto:penguinofthegods@gmail.com
+synopsis: A functional graphics API for programmable GPUs
+description: GLFWPipe models the entire graphics pipeline in a purely functional, immutable and typesafe way. It is built on top of the programmable pipeline (i.e. non-fixed function) of
+             OpenGL 2.1 and uses features such as vertex buffer objects (VBO's), texture objects and GLSL shader code synthetisation to create fast graphics programs. Buffers,
+             textures and shaders are cached internally to ensure fast framerate, and GLFWPipe is also capable of managing multiple windows and contexts. By creating your own
+             instances of GLFWPipes classes, it's possible to use additional datatypes on the GPU.
+             .
+             You'll need full OpenGL 2.1 support, including GLSL 1.20 to use GLFWPipe. Thanks to OpenGLRaw, you may still build GLFWPipe programs on machines lacking this support.
+             .
+             This is a fork of the GPipe package that uses GLFW in place of the larger, more crufty GLUT library. It may diverge further as time goes on.
+             
+category: Graphics
+author: Tobias Bexelius, Elliott Hird
+
+Flag containers03
+   Default: False
+
+Library
+    build-depends: containers >= 0.4 && < 0.5, 
+                    mtl -any, 
+                    list-tries >= 0.4 && < 0.5,
+                    GLFW-b >= 0.0.2.10 && < 0.0.3,
+                    OpenGL ==2.4.0.1,
+                    Boolean == 0.0.1,
+                    Vec == 0.9.7, 
+                    Vec-Boolean == 1.0.3,
+                    base >= 4 && < 5
+    exposed-modules: Graphics.GLFWPipe
+                     Graphics.GLFWPipe.Stream
+                     Graphics.GLFWPipe.Stream.Primitive
+                     Graphics.GLFWPipe.Stream.Fragment
+                     Graphics.GLFWPipe.FrameBuffer
+                     Graphics.GLFWPipe.Texture
+                     Graphics.GLFWPipe.Format
+    other-modules: Formats 
+                   GPUStream 
+                   InputAssembler 
+                   OutputMerger
+                   Rasterizer 
+                   Resources 
+                   Shader 
+                   Textures
+    extensions: ParallelListComp
+                MultiParamTypeClasses
+                NoMonomorphismRestriction 
+                ScopedTypeVariables 
+                FlexibleContexts
+                FlexibleInstances 
+                EmptyDataDecls 
+                GeneralizedNewtypeDeriving
+                TypeFamilies 
+                TypeOperators
+    hs-source-dirs: src

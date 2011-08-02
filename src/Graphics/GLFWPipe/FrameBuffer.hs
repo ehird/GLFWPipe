@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 --
--- Module      :  Graphics.GPipe.FrameBuffer
+-- Module      :  Graphics.GLFWPipe.FrameBuffer
 -- Copyright   :  Tobias Bexelius
 -- License     :  BSD3
 --
@@ -15,7 +15,7 @@
 -- saved to memory or converted to a texture.
 -----------------------------------------------------------------------------
 
-module Graphics.GPipe.FrameBuffer (
+module Graphics.GLFWPipe.FrameBuffer (
     -- * The data type
     FrameBuffer(),
     -- * Displaying framebuffers
@@ -40,7 +40,7 @@ module Graphics.GPipe.FrameBuffer (
     -- | These functions paint 'FragmentStream's on 'FrameBuffer's. A lot of different functions are
     -- provided for different types of 'FrameBuffer's and 'FragmentStream's, all which takes more or less
     -- state values. The preffered way of using those is to curry them into the specific  functions you need
-    -- in your GPipe program, e.g.
+    -- in your GLFWPipe program, e.g.
     --
     -- @paintSolid =@ 'paintColorRastDepth' 'Lequal' 'True' 'NoBlending' @(RGB (vec@ 'True'@))@
     --

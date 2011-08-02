@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 --
--- Module      :  Graphics.GPipe.Texture
+-- Module      :  Graphics.GLFWPipe.Texture
 -- Copyright   :  Tobias Bexelius
 -- License     :  BSD3
 --
@@ -8,7 +8,7 @@
 -- Stability   :  Experimental
 -- Portability :  Portable
 --
--- | Textures are type safe in GPipe, e.g. when you sample a @RGBFormat@ texture, you get an @RGB@ value.
+-- | Textures are type safe in GLFWPipe, e.g. when you sample a @RGBFormat@ texture, you get an @RGB@ value.
 --
 -- Textures are either created directly from memory, or by giving a framebuffer a concrete size (which
 -- it otherwise don't have). The latter is however not possible for 3D textures.
@@ -18,7 +18,7 @@
 --
 -----------------------------------------------------------------------------
 
-module Graphics.GPipe.Texture (
+module Graphics.GLFWPipe.Texture (
     -- * Data types
     Texture3D(),
     Texture2D(),

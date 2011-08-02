@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 --
--- Module      :  Graphics.GPipe.Stream.Fragment
+-- Module      :  Graphics.GLFWPipe.Stream.Fragment
 -- Copyright   :  Tobias Bexelius
 -- License     :  BSD3
 --
@@ -33,7 +33,7 @@
 
 -----------------------------------------------------------------------------
 
-module Graphics.GPipe.Stream.Fragment (
+module Graphics.GLFWPipe.Stream.Fragment (
     -- * Data types
     FragmentStream(),
     Fragment(),

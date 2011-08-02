@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 --
--- Module      :  Graphics.GPipe.Stream
+-- Module      :  Graphics.GLFWPipe.Stream
 -- Copyright   :  Tobias Bexelius
 -- License     :  BSD3
 --
@@ -8,8 +8,8 @@
 -- Stability   :  Experimental
 -- Portability :  Portable
 --
--- | A GPipe program mainly consits of creating and manipulating streams of primitives and fragments.
--- The modules "Graphics.GPipe.Stream.Primitive" and "Graphics.GPipe.Stream.Fragment" defines those streams.
+-- | A GLFWPipe program mainly consits of creating and manipulating streams of primitives and fragments.
+-- The modules "Graphics.GLFWPipe.Stream.Primitive" and "Graphics.GLFWPipe.Stream.Fragment" defines those streams.
 --
 -- All atomic values except textures in streams uses the 'Vertex' or 'Fragment' type constructors.
 -- Composite types are created by composing the atomic 'Vertex' or 'Fragment' types, rather than wrapping the
@@ -17,7 +17,7 @@
 -- as well as reexports of imported common types and modules.
 -----------------------------------------------------------------------------
 
-module Graphics.GPipe.Stream (
+module Graphics.GLFWPipe.Stream (
     -- * Common classes
     GPU(..),
     Real'(..),

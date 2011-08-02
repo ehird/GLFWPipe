@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 --
--- Module      :  Graphics.GPipe.Format
+-- Module      :  Graphics.GLFWPipe.Format
 -- Copyright   :  Tobias Bexelius
 -- License     :  BSD3
 --
@@ -12,7 +12,7 @@
 -- on the GPU and the CPU.
 -----------------------------------------------------------------------------
 
-module Graphics.GPipe.Format (
+module Graphics.GLFWPipe.Format (
     -- * GPU formats
     AlphaFormat(..),
     LuminanceFormat(..),

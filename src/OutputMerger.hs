@@ -50,13 +50,11 @@ import GPUStream
 import Resources
 import Graphics.Rendering.OpenGL hiding (RGBA, Blend, stencilMask, Color, ColorBuffer, DepthBuffer, StencilBuffer, Vertex)
 import qualified Graphics.Rendering.OpenGL as GL
+import qualified Graphics.UI.GLFW as GLFW
 import Data.Vec (vec, (:.)(..), Vec2)
-import qualified Graphics.UI.GLUT as GLUT
 import Data.Int (Int32)
 import Data.Word (Word32)
 import Foreign.Ptr (Ptr)
-import Graphics.UI.GLUT
-    (reshapeCallback, displayCallback, Window)
 import Control.Monad (liftM)
 import Data.Maybe (fromJust)
 import Control.Monad.Reader (runReaderT)
@@ -375,7 +373,7 @@ getFrameBufferColor :: forall c d s a. GPUFormat c
                     -> Ptr a -- ^ A pointer to the memory where the data will be saved
                     -> IO ()
 getFrameBufferColor f s@(w:.h:.()) fb p = do
-    cache <- getCurrentOrSetHiddenContext
+    cache <- getContextCache
     runFrameBufferInContext cache s fb
     readPixels (Position 0 0) (Size (fromIntegral w) (fromIntegral h)) (PixelData (toGLPixelFormat (undefined :: c)) (toGLDataType f) p)
 
@@ -386,7 +384,7 @@ getFrameBufferDepth :: CPUFormat DepthFormat -- ^ The format to store data to
                     -> Ptr a -- ^ A pointer to the memory where the data will be saved
                     -> IO ()
 getFrameBufferDepth f s@(w:.h:.()) fb p = do
-    cache <- getCurrentOrSetHiddenContext
+    cache <- getContextCache
     runFrameBufferInContext cache s fb
     readPixels (Position 0 0) (Size (fromIntegral w) (fromIntegral h)) (PixelData DepthComponent (toGLDataType f) p)
 
@@ -397,31 +395,36 @@ getFrameBufferStencil :: CPUFormat StencilFormat -- ^ The format to store data t
                       -> Ptr a -- ^ A pointer to the memory where the data will be saved
                       -> IO ()
 getFrameBufferStencil f s@(w:.h:.()) fb p = do
-    cache <- getCurrentOrSetHiddenContext
+    cache <- getContextCache
     runFrameBufferInContext cache s fb
     readPixels (Position 0 0) (Size (fromIntegral w) (fromIntegral h)) (PixelData StencilIndex (toGLDataType f) p)
 
--- | Cretes and shows a new GPipe window. Use the last parameter to add extra GLUT callbacks to the window. Note that you can't register your own 'displayCallback' and 'reshapeCallback'.
+windowRefreshCallback :: IO (FrameBuffer c d s) -> GLFW.WindowRefreshCallback
+windowRefreshCallback m = do
+    cache <- getContextCache
+    let Size x y = contextViewPort cache
+    FrameBuffer io <- m
+    runReaderT io cache
+    GLFW.swapBuffers
+
+windowSizeCallback :: GLFW.WindowSizeCallback
+windowSizeCallback w h = changeContextSize $ Size (fromIntegral w) (fromIhtegral h)
+
+-- TODO: Make this good -EH
+-- | Creates and shows a new GLFWPipe window. This is just a convenience wrapper; see 'windowRefreshCallback' and 'windowSizeCallback' if you want to roll your own.
 newWindow :: String     -- ^ The window title
           -> Vec2 Int   -- ^ The window position
           -> Vec2 Int   -- ^ The window size
           -> (Vec2 Int -> IO (FrameBuffer c d s)) -- ^ This function is evaluated every time the window needs to be redrawn, and the resulting 'FrameBuffer' will be drawn in the window. The parameter is the current size of the window.
-          -> (Window -> IO ()) -- ^ Extra optional initialization of the window. The provided 'Window' should not be used outside this function.
           -> IO ()
-newWindow name (x:.y:.()) (w:.h:.()) f xio =
-    do GLUT.initialWindowPosition $= Position (fromIntegral x) (fromIntegral y)
-       GLUT.initialWindowSize $= Size (fromIntegral w) (fromIntegral h)
-       GLUT.initialDisplayMode $= [ GLUT.DoubleBuffered, GLUT.RGBMode, GLUT.WithAlphaComponent, GLUT.WithDepthBuffer, GLUT.WithStencilBuffer] --Enable everything, it might be needed for textures 
-       w <- GLUT.createWindow name
-       xio w
-       newContextCache w
-       displayCallback $= do cache <- liftM fromJust $ getContextCache w --We need to do this to get the correct size
-                             let Size x y = contextViewPort cache
-                             FrameBuffer io <- f (fromIntegral x :. fromIntegral y :. ())
-                             runReaderT io cache
-                             GLUT.swapBuffers
-       reshapeCallback $= Just (changeContextSize w)
-
+newWindow name (x:.y:.()) sz@(w:.h:.()) f =
+    do GLFW.openWindow GLFW.defaultDisplayOptions
+           { GLFW.displayOptions_width        = w
+           , GLFW.displayOptions_height       = h
+           , GLFW.displayOptions_numAlphaBits = 8 }
+       GLFW.setWindowTitle name
+       GLFW.setWindowRefreshCallback $ windowRefreshCallback (f sz)
+       GLFW.setWindowSizeCallback windowSizeCallback
 
 runFrameBufferInContext :: ContextCache -> Vec2 Int -> FrameBuffer c d s -> IO ()
 runFrameBufferInContext c (a:.b:.()) (FrameBuffer io) = do
