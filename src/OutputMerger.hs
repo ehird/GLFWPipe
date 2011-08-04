@@ -408,7 +408,7 @@ windowRefreshCallback m = do
     GLFW.swapBuffers
 
 windowSizeCallback :: GLFW.WindowSizeCallback
-windowSizeCallback w h = changeContextSize $ Size (fromIntegral w) (fromIhtegral h)
+windowSizeCallback w h = changeContextSize $ Size (fromIntegral w) (fromIntegral h)
 
 -- TODO: Make this good -EH
 -- | Creates and shows a new GLFWPipe window. This is just a convenience wrapper; see 'windowRefreshCallback' and 'windowSizeCallback' if you want to roll your own.
